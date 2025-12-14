@@ -1,5 +1,5 @@
 > [!CAUTION]
-> I am very new to bash scripting, as a result, this script will have tons of bugs, possibly even ones leading to data loss! I am not responsible for any damage caused by this script.
+> I am very new to bash scripting, and as a result this script will have tons of bugs, possibly even ones leading to data loss! I am not responsible for any damage caused by this script.
 
 ## Clipboard file transfer over terminal
 This bash script provides a <ins>**proof of concept**</ins> method of transferring files and folders over terminals via the clipboard.
