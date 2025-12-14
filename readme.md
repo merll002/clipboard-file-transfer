@@ -5,6 +5,17 @@
 This bash script provides a <ins>**proof of concept**</ins> method of transferring files and folders over terminals via the clipboard.
 For example, to transfer files over to a locked down machine via ssh with no internet access.
 
+### Showcase
+#### Benchmarking speed
+![bench](https://github.com/user-attachments/assets/0c983107-4e2f-4d25-88b0-77b07e861948)
+> It started off slow due to network traffic
+
+#### Getting optimal compression method
+![gcm](https://github.com/user-attachments/assets/dfef3f9f-3642-4c4e-8c65-1bd8bfb23ce5)
+
+#### Transferring folder
+![transfer](https://github.com/user-attachments/assets/19ae186f-a282-4b26-938b-b8968bac2b61)
+
 ### How to run this script (if you dare)
 Download the latest `transfer.bash` script from the repo, and run with `bash transfer.bash`
 > [!NOTE]
