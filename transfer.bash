@@ -58,7 +58,7 @@ start_bench() {
 #         printf "\r$chars_per_sec characters per second, ~$mb_per_s KB/s"
 #     done
 # stty sane
-
+clear
 stty -icanon -echo
 total=0
 unset runs
@@ -84,7 +84,7 @@ while true; do
         total=$(awk "BEGIN {print $i+$total; exit}")
     done
     average_kb_per_sec=$(awk -v num_runs="${#runs[@]}" -v total="$total" 'BEGIN { printf("%.3f", total/num_runs) }')
-    printf "\r$chars_per_sec ASCII characters per second, ~$kb_per_s KB/s (average over time: $average_kb_per_sec KB/s)  "
+    printf "\r\033[2K$chars_per_sec ASCII characters per second, ~$kb_per_s KB/s (average over time: $average_kb_per_sec KB/s)  "
     
 done
 stty sane
@@ -126,7 +126,7 @@ EOF
     stty -icanon -echo
     unset data
     percentage=0
-    echo
+    clear
     read -sn $letters_per_percentage -p "Ready to recieve (paste): " part
     data+=$part
     for i in $(seq 1 $iterations); do
@@ -192,7 +192,7 @@ set_comp_uncomp_vars() {
 }
 
 
-if [ "$1" == "gcm" ] ||  [ "$1" == "get_compression_method" ]; then
+if [ "$1" == "gcm" ] || [ "$1" == "get-compression-method" ]; then
     get_compression_method
     echo "Paste your clipboard and press enter in the remote terminal to see the results."
 fi
