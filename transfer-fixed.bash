@@ -36,7 +36,11 @@ while getopts 'c:t:h' opt; do
             ;;
     esac
 done
-shift "$(($OPTIND -1))"
+shift "$((OPTIND -1))"
+
+# echo "Argument 1: $1"
+# echo "Argument 2: $2"
+# echo "Argument 3: $3"
 
 get_compression_method() {
     encoded_script=$(cat <<'EOF' | base64 -w 0
@@ -84,7 +88,7 @@ while true; do
         total=$(awk "BEGIN {print $i+$total; exit}")
     done
     average_kb_per_sec=$(awk -v num_runs="${#runs[@]}" -v total="$total" 'BEGIN { printf("%.3f", total/num_runs) }')
-    printf "\r\033[2K$chars_per_sec ASCII characters per second, ~$kb_per_s KB/s (average over time: $average_kb_per_sec KB/s)  "
+    printf "\r\033[2K$chars_per_sec ASCII characters per second, ~$kb_per_s KB/s (average over time: $average_kb_per_sec KB/s)"
     
 done
 stty sane
@@ -94,7 +98,8 @@ EOF
         echo "Paste your clipboard and press enter in the remote terminal to start benchmark."
         read -rp "Press enter once pasted..."
         echo "Paste on repeat to see results (may lag). Press Ctrl + C to stop."
-        python -c "print('.'*50001)" | ${clip_copy}
+        # python -c "print('.'*50000, end='')" | ${clip_copy}
+        printf '%*s' 50001 | ${clip_copy}
 }
 
 start_receiver() {
@@ -140,8 +145,9 @@ EOF
         percentage=$(awk "BEGIN { printf(\"%.2f\", $i * (100/$data_len) * $accurate_letters_per_percentage) }")
     done
     echo -e "\r\033[2K$percentage%"
-    echo "Recieved! Uncompressing..."
-    base64 -d <<<$data | ${uncomp_command[@]} | tar -xf - || echo "^^^^ Ignore this error if using gzip (its probably fine) ^^^^"
+    echo "Recieved! Uncompressing to ./data..."
+    mkdir -p data
+    base64 -d <<<$data | ${uncomp_command[@]} | tar -C data -xf - || echo "^^^^ Ignore this error if using gzip (its probably fine) ^^^^"
     stty sane
 EOF
     )
@@ -179,7 +185,7 @@ set_comp_uncomp_vars() {
     elif [ "$comp_method" == "zstd" ]; then
         uncomp_command=(zstcat)
     elif [ "$comp_method" == "gzip" ]; then
-        uncomp_command=(tar -x --use-compress-program=gzip -f -)
+        uncomp_command=(tar -x --use-compress-program=gzip -f -C data -)
     elif [ "$comp_method" == "lz4" ]; then
         uncomp_command=(lz4cat)
     elif [ "$comp_method" == "none" ]; then
@@ -208,7 +214,6 @@ if [ ! -z "$transfer_chosen" ]; then
 elif [ "$1" == "gcm" ] || [ "$1" == "get-compression-method" ]; then
     get_compression_method
     echo "Paste your clipboard and press enter in the remote terminal to see the results."
-
 elif [ "$1" == "bench" ]; then
     start_bench
 else
