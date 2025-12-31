@@ -21,22 +21,23 @@ Download the latest `transfer.bash` script from the repo, and run with `bash tra
 > [!NOTE]
 > Use middleclick paste, not `Ctrl + Shift + V`
 >
-> If you are on X11, then swap the clipboard copy commands in the script (`wl-copy`).
+> If you are on X11, then set the clipboard copy command with `-c` e.g., `fish -c 'fish_clipboard_copy'` for universal compatibility.
 
 ### Usage:
 ```
-Usage: clipboard-file-transfer/transfer.bash [command] [args] [file]
+Usage: transfer.bash [command] [-c <method>] [-t <compression>] [file]
 
-Args:
+Arguments:
   -t  select compression type, e.g., `-t gz`
+  -c  set clipboard copy method. Default: `wl-copy -p`
 
 Commands:
   get-compression-method, gcm  Determine the optimal compression method supported on the target system
   bench                        Start a transfer speed benchmark (cool)
 
 Examples:
-  clipboard-file-transfer/transfer.bash get-compression-method
-  clipboard-file-transfer/transfer.bash -t gzip file.txt  Transfer file with the gzip compression method
+  transfer.bash get-compression-method
+  transfer.bash -t gzip file.txt  Transfer file with the gzip compression method
 ```
 #### PRs please!
 Any PRs would be appreciated (this script could do with some improvements)
