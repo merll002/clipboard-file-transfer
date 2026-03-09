@@ -1,21 +1,45 @@
-getopts t: flag
-comp_method="${OPTARG}"
+#!/bin/bash
 set -eo pipefail
-if { [ "$#" -ne 3 ] && [ "$flag" != "?" ]; } || { [ "$flag" == "?" ] && { [ "$#" -ne 1 ] || [ "$1" != "get-compression-method" ] && [ "$1" != "gcm" ] && [ "$1" != "bench" ]; }; }; then
-    echo "Usage: $0 [command] [args] [file]"
+print_usage() {
+    echo "usage: $0 [command] [-c <clip tool>] [-t <compression>] [file]"
     echo
     echo "Args:"
     echo "  -t  select compression type, e.g., \`-t gz\`"
+    echo "  -c  set clipboard copy method. Default: \`wl-copy -p\`"
     echo
     echo "Commands:"
     echo "  get-compression-method, gcm  Determine the optimal compression method supported on the target system"
     echo "  bench                        Start a transfer speed benchmark (cool)"
     echo
     echo "Examples:"
-    echo "  $0 get-compression-method"
-    echo "  $0 -t gzip file.txt  Transfer file with the gzip compression method"
+    echo "  $0 gcm                        Get optimal compression method"
+    echo "  $0 -t gzip -c xclip file.txt  Transfer file with the gzip compression method"
     exit 1
-fi
+}
+clip_copy='wl-copy -p'
+while getopts 'c:t:h' opt; do
+    case "$opt" in
+        c)
+            echo "Picking ${OPTARG} for the clipboard copy command."
+            clip_copy="${OPTARG}"
+            ;;
+
+        t)
+            echo "Choosing ${OPTARG} as the compression method."
+            comp_method="${OPTARG}"
+            transfer_chosen=true
+            ;;
+    
+        *)
+            print_usage
+            ;;
+    esac
+done
+shift "$((OPTIND -1))"
+
+# echo "Argument 1: $1"
+# echo "Argument 2: $2"
+# echo "Argument 3: $3"
 
 get_compression_method() {
     encoded_script=$(cat <<'EOF' | base64 -w 0
@@ -31,34 +55,13 @@ get_compression_method() {
     echo "The best compression available is $best. Use this with the -t argument"
 EOF
     )
-        echo "bash <(echo $encoded_script | base64 -d)" | wl-copy -p
+        echo "bash <(echo $encoded_script | base64 -d)" | ${clip_copy}
 }
 
 start_bench() {
     encoded_script=$(cat <<'EOF' | base64 -w 0
-#     stty -icanon -echo
-#     while true; do
-#         first_ns=0
-#         last_ns=0
-
-#         while read -r -n1 ch; do
-#         if [[ "$ch" == "X" ]]; then
-#             if [ "$first_ns" -ne 0 ]; then
-#                 last_ns=$(date +%s%N)
-#                 break
-#             fi
-#             first_ns=$(date +%s%N)
-#         fi
-#         done
-
-#         elapsed_ns=$((last_ns - first_ns))
-#         n=10000
-#         chars_per_sec=$(awk -v n="$n" -v ns="$elapsed_ns" 'BEGIN { printf("%.2f", (n / (ns/1e9) / 1e4 )) }')
-#         mb_per_s=$(awk -v n="$n" -v ns="$elapsed_ns" 'BEGIN { printf("%.3f", (n/(ns/1e9))/1e3) }')
-#         printf "\r$chars_per_sec characters per second, ~$mb_per_s KB/s"
-#     done
-# stty sane
 clear
+echo "Get ready to spam paste!"
 stty -icanon -echo
 total=0
 unset runs
@@ -84,17 +87,18 @@ while true; do
         total=$(awk "BEGIN {print $i+$total; exit}")
     done
     average_kb_per_sec=$(awk -v num_runs="${#runs[@]}" -v total="$total" 'BEGIN { printf("%.3f", total/num_runs) }')
-    printf "\r\033[2K$chars_per_sec ASCII characters per second, ~$kb_per_s KB/s (average over time: $average_kb_per_sec KB/s)  "
+    printf "\r\033[2K$chars_per_sec ASCII characters per second, ~$kb_per_s KB/s (average over time: $average_kb_per_sec KB/s)"
     
 done
 stty sane
 EOF
     )
-        echo "bash <(echo $encoded_script | base64 -d)" | wl-copy -p
+        echo "bash <(echo $encoded_script | base64 -d)" | ${clip_copy}
         echo "Paste your clipboard and press enter in the remote terminal to start benchmark."
         read -rp "Press enter once pasted..."
         echo "Paste on repeat to see results (may lag). Press Ctrl + C to stop."
-        python -c "print('.'*50000)" | wl-copy -p
+        # python -c "print('.'*50000, end='')" | ${clip_copy}
+        printf '%*s' 50001 | ${clip_copy}
 }
 
 start_receiver() {
@@ -131,7 +135,7 @@ EOF
     data+=$part
     for i in $(seq 1 $iterations); do
         printf "\r\033[2KReceiving... "
-        read -sn $letters_per_percentage -p "$percentage%" part
+        read -sn $letters_per_percentage -p "$percentage% (if stuck at 99%, press enter)" part
         if [ ${part: -1} == '#' ]; then
             data+=${part: 0:-1}
             break
@@ -140,13 +144,14 @@ EOF
         percentage=$(awk "BEGIN { printf(\"%.2f\", $i * (100/$data_len) * $accurate_letters_per_percentage) }")
     done
     echo -e "\r\033[2K$percentage%"
-    echo "Recieved! Uncompressing..."
-    base64 -d <<<$data | ${uncomp_command[@]} | tar -xf - || echo "^^^^ Ignore this error if using gzip ^^^^"
+    echo "Recieved! Uncompressing to ./data..."
+    mkdir -p data
+    base64 -d <<<$data | ${uncomp_command[@]} | tar -C data -xf - || echo "^^^^ Ignore this error if using gzip (its probably fine) ^^^^"
     stty sane
 EOF
     )
     encoded_script=$(base64 -w 0 <<<"$part1$part2")
-        echo "bash <(echo $encoded_script | base64 -d)" | wl-copy -p
+        echo "bash <(echo $encoded_script | base64 -d)" | ${clip_copy}
 }
 
 set_comp_uncomp_vars() {
@@ -179,7 +184,7 @@ set_comp_uncomp_vars() {
     elif [ "$comp_method" == "zstd" ]; then
         uncomp_command=(zstcat)
     elif [ "$comp_method" == "gzip" ]; then
-        uncomp_command=(tar -x --use-compress-program=gzip -f -)
+        uncomp_command=(tar -x --use-compress-program=gzip -f -C data -)
     elif [ "$comp_method" == "lz4" ]; then
         uncomp_command=(lz4cat)
     elif [ "$comp_method" == "none" ]; then
@@ -190,23 +195,11 @@ set_comp_uncomp_vars() {
         uncomp_command=(cat)
     fi
 }
-
-
-if [ "$1" == "gcm" ] || [ "$1" == "get-compression-method" ]; then
-    get_compression_method
-    echo "Paste your clipboard and press enter in the remote terminal to see the results."
-fi
-
-if [ "$1" == "bench" ]; then
-    start_bench
-fi
-
-
-if [ "$flag" != "?" ]; then
+if [ ! -z "$transfer_chosen" ]; then
     set_comp_uncomp_vars
-    target_file="$3"
+    target_file="$1"
     echo "Compressing file/folder, may take a while... (but not longer than the transfer xD)"
-    encoded_data=$("${comp_command[@]}" "$3" | base64 -w 0)
+    encoded_data=$("${comp_command[@]}" "$1" | base64 -w 0)
     echo "Finished compressing."
     data_len=${#encoded_data}
 
@@ -214,8 +207,14 @@ if [ "$flag" != "?" ]; then
     echo "Paste your clipboard and press enter in the remote terminal to start the receiver."
     echo
     read -rsn1 -p "Press enter when ready to copy payload..."
-    wl-copy -p <<<"$encoded_data"#
+    ${clip_copy} <<<"$encoded_data"#
     echo
     echo "All done here, goodbye!"
-    # echo X"echo $encoded_data | base64 -d" "| " "${uncomp_command[@]}" "> $(basename "$3")" | wl-copy -p # The 'X' at the start is a control char to tell the remote machine that the pasting has started
+elif [ "$1" == "gcm" ] || [ "$1" == "get-compression-method" ]; then
+    get_compression_method
+    echo "Paste your clipboard and press enter in the remote terminal to see the results."
+elif [ "$1" == "bench" ]; then
+    start_bench
+else
+    print_usage
 fi

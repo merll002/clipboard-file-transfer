@@ -3,7 +3,7 @@
 
 ## Clipboard file transfer over terminal
 This bash script provides a <ins>**proof of concept**</ins> method of transferring files and folders over terminals via the clipboard.
-For example, to transfer files over to a locked down machine via ssh with no internet access.
+For example, to transfer files over to a locked down machine with no internet access via ssh.
 
 ### Showcase
 #### Benchmarking speed
@@ -21,13 +21,13 @@ Download the latest `transfer.bash` script from the repo, and run with `bash tra
 > [!NOTE]
 > Use middleclick paste, not `Ctrl + Shift + V`
 >
-> If you are on X11, then set the clipboard copy command with `-c` e.g., `fish -c 'fish_clipboard_copy'` for universal compatibility.
+> If you are on X11, then set the clipboard copy command to xclip with `-c xclip`, or `clip` for Windows.
 
 ### Usage:
 ```
-Usage: transfer.bash [command] [-c <method>] [-t <compression>] [file]
+usage: transfer.bash [command] [-c <clip tool>] [-t <compression>] [file]
 
-Arguments:
+Args:
   -t  select compression type, e.g., `-t gz`
   -c  set clipboard copy method. Default: `wl-copy -p`
 
@@ -36,9 +36,15 @@ Commands:
   bench                        Start a transfer speed benchmark (cool)
 
 Examples:
-  transfer.bash get-compression-method
-  transfer.bash -t gzip file.txt  Transfer file with the gzip compression method
+  transfer.bash gcm                        Get optimal compression method
+  transfer.bash -t gzip -c xclip file.txt  Transfer file with the gzip compression method
+
 ```
+
+### Roadmap:
+- [ ] Ability to choose compression strength
+- [ ] Calculate time remaining from the time for each packet to be transferred
+
 #### PRs please!
 Any PRs would be appreciated (this script could do with some improvements)
 
